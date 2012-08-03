@@ -223,11 +223,13 @@ cmd_start() {
 	echo "- A new branch '$BRANCH' was created, based on '$BASE'"
 	echo "- You are now on branch '$BRANCH'"
 	
-        # If maven exists and project is mavenized
-        CHECK_MVN=`mvn -version 2>&1 | grep "Apache Maven"`
-        IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
+    # If maven exists and project is mavenized
+    IS_MAVEN_INSTALLED=`which mvn`
+    IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
+    if [ -n "$IS_MAVEN_INSTALLED" -a -n "$IS_PROJECT_MAVENIZED" ]
+    then
         mvn -B help:evaluate -Dexpression=project.modelVersion 2>&1 > /dev/null; IS_HELP_PLUGIN_AVAILABLE=$?
-        if [ -n "$CHECK_MVN" -a -n "$IS_PROJECT_MAVENIZED" -a "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]
+        if [ "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]
         then
             VERSION_SEPARATOR="-"
             SNAPSHOT="SNAPSHOT"
@@ -235,18 +237,24 @@ cmd_start() {
             CURRENT_VERSION_NUM_PART=`echo "$CURRENT_VERSION" | awk -F"$VERSION_SEPARATOR" '{print $1}'`
             FEATURE_VERSION="$CURRENT_VERSION_NUM_PART$VERSION_SEPARATOR$BRANCH$VERSION_SEPARATOR$SNAPSHOT"
 
-            echo "Current project version is $CURRENT_VERSION"
-            echo "New project version is $FEATURE_VERSION"
-
             mvn versions:set -DnewVersion="$FEATURE_VERSION" 2>&1 > /dev/null
             mvn versions:commit 2>&1 > /dev/null
             git commit -a -m "Changed version from $CURRENT_VERSION to $FEATURE_VERSION" 2>&1 > /dev/null
+            if [ "$?" -eq 0 ]
+            then
+                echo "- Changed version from $CURRENT_VERSION to $FEATURE_VERSION"
+            else
+                echo "[ERROR]: Some error during version changing"
+            fi
+        else
+            echo "[ERROR]: Cannot run help:evaluate plugin"
         fi
+    fi
 
-        echo ""
+    echo ""
 	echo "Now, start committing on your feature. When done, use:"
-        echo "     git flow feature finish $NAME"
-        echo ""
+    echo "     git flow feature finish $NAME"
+    echo ""
 }
 
 cmd_finish() {
@@ -329,6 +337,35 @@ cmd_finish() {
 			exit 1
 		fi
 	fi
+
+	#mavenized project: version fetch from dev branch before merge to dev
+	IS_MAVEN_INSTALLED=`which mvn`
+    IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
+    if [ -n "$IS_MAVEN_INSTALLED" -a -n "$IS_PROJECT_MAVENIZED" ]
+    then
+        mvn -B help:evaluate -Dexpression=project.modelVersion 2>&1 > /dev/null; IS_HELP_PLUGIN_AVAILABLE=$?
+        if [ "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]
+        then
+            VERSION_SEPARATOR="-"
+            SNAPSHOT="SNAPSHOT"
+
+            git checkout "$DEVELOP_BRANCH"
+            CURRENT_DEV_VERSION=`mvn help:evaluate -Dexpression=project.version | egrep -v "\[INFO\]"`
+            git checkout "$BRANCH"
+            mvn versions:set -DnewVersion="$CURRENT_DEV_VERSION" 2>&1 > /dev/null
+            mvn versions:commit 2>&1 > /dev/null
+            git commit -a -m "Changed version to $CURRENT_DEV_VERSION" 2>&1 > /dev/null
+            if [ "$?" -eq 0 ]
+            then
+                echo "- Changed version to $CURRENT_DEV_VERSION"
+            else
+                echo "[ERROR]: Some error during version changing"
+            fi
+        else
+            echo "[ERROR]: Cannot run help:evaluate plugin"
+        fi
+    fi
+
 
 	# merge into BASE
 	git checkout "$DEVELOP_BRANCH"
