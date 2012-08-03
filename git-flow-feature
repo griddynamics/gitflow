@@ -224,37 +224,91 @@ cmd_start() {
 	echo "- You are now on branch '$BRANCH'"
 	
     # If maven exists and project is mavenized
-    IS_MAVEN_INSTALLED=`which mvn`
-    IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
-    if [ -n "$IS_MAVEN_INSTALLED" -a -n "$IS_PROJECT_MAVENIZED" ]
-    then
-        mvn -B help:evaluate -Dexpression=project.modelVersion 2>&1 > /dev/null; IS_HELP_PLUGIN_AVAILABLE=$?
-        if [ "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]
-        then
-            VERSION_SEPARATOR="-"
-            SNAPSHOT="SNAPSHOT"
-            CURRENT_VERSION=`mvn help:evaluate -Dexpression=project.version | egrep -v "\[INFO\]"`
-            CURRENT_VERSION_NUM_PART=`echo "$CURRENT_VERSION" | awk -F"$VERSION_SEPARATOR" '{print $1}'`
-            FEATURE_VERSION="$CURRENT_VERSION_NUM_PART$VERSION_SEPARATOR$BRANCH$VERSION_SEPARATOR$SNAPSHOT"
-
-            mvn versions:set -DnewVersion="$FEATURE_VERSION" 2>&1 > /dev/null
-            mvn versions:commit 2>&1 > /dev/null
-            git commit -a -m "Changed version from $CURRENT_VERSION to $FEATURE_VERSION" 2>&1 > /dev/null
-            if [ "$?" -eq 0 ]
-            then
-                echo "- Changed version from $CURRENT_VERSION to $FEATURE_VERSION"
-            else
-                echo "[ERROR]: Some error during version changing"
-            fi
-        else
-            echo "[ERROR]: Cannot run help:evaluate plugin"
-        fi
-    fi
+    change_version_from_dev_to_feature
 
     echo ""
 	echo "Now, start committing on your feature. When done, use:"
     echo "     git flow feature finish $NAME"
     echo ""
+}
+
+change_version_from_dev_to_feature() {
+    if is_maven_installed; then
+        if is_maven_help_plugin_available; then
+            local VERSION_SEPARATOR="-"
+            local SNAPSHOT="SNAPSHOT"
+
+            local CURRENT_VERSION=''
+            get_maven_project_version CURRENT_VERSION
+            if [ -n "$CURRENT_VERSION" ]; then
+                local CURRENT_VERSION_NUM_PART=`echo "$CURRENT_VERSION" | awk -F"$VERSION_SEPARATOR" '{print $1}'`
+                local FEATURE_VERSION="$CURRENT_VERSION_NUM_PART$VERSION_SEPARATOR$BRANCH$VERSION_SEPARATOR$SNAPSHOT"
+
+                mvn versions:set -DnewVersion="$FEATURE_VERSION" 2>&1 > /dev/null
+                mvn versions:commit 2>&1 > /dev/null
+                git commit -a -m "Changed version from $CURRENT_VERSION to $FEATURE_VERSION" 2>&1 > /dev/null
+                if [ "$?" -eq 0 ]; then
+                    echo "- Changed version from $CURRENT_VERSION to $FEATURE_VERSION"
+                else
+                    echo "[ERROR]: Some error during version changing"
+                fi
+            else
+                echo "[ERROR]: Cannot get version from pom.xml"
+            fi
+        else
+            echo "[ERROR]: Cannot run help:evaluate plugin"
+        fi
+    fi
+}
+
+change_version_from_feature_to_dev() {
+    if is_maven_installed; then
+        if is_maven_help_plugin_available; then
+            git checkout "$DEVELOP_BRANCH"
+            local CURRENT_DEV_VERSION=''
+            get_maven_project_version CURRENT_DEV_VERSION
+            if []; then
+                git checkout "$BRANCH"
+                mvn versions:set -DnewVersion="$CURRENT_DEV_VERSION" 2>&1 > /dev/null
+                mvn versions:commit 2>&1 > /dev/null
+                git commit -a -m "Changed version to $CURRENT_DEV_VERSION" 2>&1 > /dev/null
+                if [ "$?" -eq 0 ]
+                then
+                    echo "- Changed version to $CURRENT_DEV_VERSION"
+                else
+                    echo "[ERROR]: Some error during version changing"
+                fi
+            else
+                echo "[ERROR]: Cannot get version from pom.xml"
+            fi
+        else
+            echo "[ERROR]: Cannot run help:evaluate plugin"
+        fi
+    fi
+}
+
+get_maven_project_version() {
+    eval $1=`mvn help:evaluate -Dexpression=project.version | egrep -i -v "\[INFO\]" | egrep -i -v "download"`
+}
+
+is_maven_help_plugin_available() {
+    mvn -B help:evaluate -Dexpression=project.modelVersion 2>&1 > /dev/null
+    local IS_HELP_PLUGIN_AVAILABLE=$?
+    if [ "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+is_maven_installed() {
+    local IS_MAVEN_INSTALLED=`which mvn`
+    local IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
+    if [ -n "$IS_MAVEN_INSTALLED" -a -n "$IS_PROJECT_MAVENIZED" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 cmd_finish() {
@@ -339,32 +393,7 @@ cmd_finish() {
 	fi
 
 	#mavenized project: version fetch from dev branch before merge to dev
-	IS_MAVEN_INSTALLED=`which mvn`
-    IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
-    if [ -n "$IS_MAVEN_INSTALLED" -a -n "$IS_PROJECT_MAVENIZED" ]
-    then
-        mvn -B help:evaluate -Dexpression=project.modelVersion 2>&1 > /dev/null; IS_HELP_PLUGIN_AVAILABLE=$?
-        if [ "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]
-        then
-            VERSION_SEPARATOR="-"
-            SNAPSHOT="SNAPSHOT"
-
-            git checkout "$DEVELOP_BRANCH"
-            CURRENT_DEV_VERSION=`mvn help:evaluate -Dexpression=project.version | egrep -v "\[INFO\]"`
-            git checkout "$BRANCH"
-            mvn versions:set -DnewVersion="$CURRENT_DEV_VERSION" 2>&1 > /dev/null
-            mvn versions:commit 2>&1 > /dev/null
-            git commit -a -m "Changed version to $CURRENT_DEV_VERSION" 2>&1 > /dev/null
-            if [ "$?" -eq 0 ]
-            then
-                echo "- Changed version to $CURRENT_DEV_VERSION"
-            else
-                echo "[ERROR]: Some error during version changing"
-            fi
-        else
-            echo "[ERROR]: Cannot run help:evaluate plugin"
-        fi
-    fi
+    change_version_from_feature_to_dev
 
 
 	# merge into BASE
