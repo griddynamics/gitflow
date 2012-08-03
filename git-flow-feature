@@ -224,9 +224,28 @@ cmd_start() {
 	echo "- You are now on branch '$BRANCH'"
 	echo ""
 	echo "Now, start committing on your feature. When done, use:"
-	echo ""
-	echo "     git flow feature finish $NAME"
-	echo
+	
+        # If maven exists and project is mavenized
+        CHECK_MVN=`mvn -version 2>&1 | grep "Apache Maven"`
+        IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
+        if [ -n "$CHECK_MVN" -a -n "$IS_PROJECT_MAVENIZED" ]
+        then
+            VERSION_SEPARATOR="-"
+            SNAPSHOT="SNAPSHOT"
+            CURRENT_VERSION=`mvn help:evaluate -Dexpression=project.version | egrep -v "\[INFO\]"`
+            CURRENT_VERSION_NUM_PART=`echo "$CURRENT_VERSION" | awk -F"$VERSION_SEPARATOR" '{print $1}'`
+            FEATURE_VERSION="$CURRENT_VERSION_NUM_PART$VERSION_SEPARATOR$BRANCH$VERSION_SEPARATOR$SNAPSHOT"
+
+            echo "Current project version is $CURRENT_VERSION"
+            echo "New project version is $FEATURE_VERSION"
+
+            mvn versions:set -DnewVersion="$FEATURE_VERSION" 2>&1 > /dev/null
+            mvn versions:commit 2>&1 > /dev/null
+            git commit -a -m "Changed version from $CURRENT_VERSION to $FEATURE_VERSION" 2>&1 > /dev/null
+        fi
+
+        echo "     git flow feature finish $NAME"
+        echo ""
 }
 
 cmd_finish() {
