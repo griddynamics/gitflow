@@ -222,13 +222,12 @@ cmd_start() {
 	echo "Summary of actions:"
 	echo "- A new branch '$BRANCH' was created, based on '$BASE'"
 	echo "- You are now on branch '$BRANCH'"
-	echo ""
-	echo "Now, start committing on your feature. When done, use:"
 	
         # If maven exists and project is mavenized
         CHECK_MVN=`mvn -version 2>&1 | grep "Apache Maven"`
         IS_PROJECT_MAVENIZED=`ls | grep pom.xml`
-        if [ -n "$CHECK_MVN" -a -n "$IS_PROJECT_MAVENIZED" ]
+        mvn -B help:evaluate -Dexpression=project.modelVersion 2>&1 > /dev/null; IS_HELP_PLUGIN_AVAILABLE=$?
+        if [ -n "$CHECK_MVN" -a -n "$IS_PROJECT_MAVENIZED" -a "$IS_HELP_PLUGIN_AVAILABLE" -eq 0 ]
         then
             VERSION_SEPARATOR="-"
             SNAPSHOT="SNAPSHOT"
@@ -244,6 +243,8 @@ cmd_start() {
             git commit -a -m "Changed version from $CURRENT_VERSION to $FEATURE_VERSION" 2>&1 > /dev/null
         fi
 
+        echo ""
+	echo "Now, start committing on your feature. When done, use:"
         echo "     git flow feature finish $NAME"
         echo ""
 }
