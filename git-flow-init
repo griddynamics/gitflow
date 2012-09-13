@@ -253,7 +253,7 @@ cmd_default() {
 		#	printf "\n"
 		#fi
 		# was prefix=${answer:-$default_suggestion} become
-		[ "$answer" = "-" ] && prefix= || prefix=fb-
+		[ "$answer" = "-" ] && prefix= #|| prefix=fb-
 		git config gitflow.prefix.feature "$prefix"
 	fi
 
