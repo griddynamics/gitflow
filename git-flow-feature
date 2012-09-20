@@ -334,6 +334,15 @@ cmd_finish() {
 	# sanity checks
 	require_branch "$BRANCH"
 
+	# check if we have commits, that didn't send for review or we just forget use fetch command
+	git_status=`git status | grep 'ahead of' | grep -c 'by'`
+	if [ $git_status -gt 0 ]; then
+		echo
+		echo "You have commits, that don't present on gerrit or you just forget to fetch it before call this command"
+		echo
+		exit 1
+	fi
+	
 	# detect if we're restoring from a merge conflict
 	if [ -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE" ]; then
 		#
