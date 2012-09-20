@@ -200,10 +200,8 @@ cmd_start() {
 	BASE=${2:-$DEVELOP_BRANCH}
 	
 	require_name_arg
-
-	PREFIX=`expr substr $NAME 1 3`
-	echo "Prefix of the branch: '$PREFIX'"
-	if [ "$PREFIX" != "fb-" ]; then
+	
+	if echo $NAME | grep -qvE '^fb-'; then 
                 warn "Missing preifx fb-"
                 echo "Must create branch with prefix fb-"
                 exit 1
