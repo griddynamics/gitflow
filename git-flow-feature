@@ -54,10 +54,29 @@ usage() {
 	echo "       git flow feature rebase [-i] [<name|nameprefix>]"
 	echo "       git flow feature checkout [<name|nameprefix>]"
 	echo "       git flow feature pull [-r] <remote> [<name>]"
+	echo "       git flow feature review <name>"		
 }
 
 cmd_default() {
 	cmd_list "$@"
+}
+
+cmd_review() {
+	parse_args "$@"
+
+	# we need to check, that git review is installed and remote gerrit configured properly
+	gitreview_ex=`git review $NAME --dry-run | grep -c "No '.gitreview' file"`
+	if [ $gitreview_ex -eq 1 ]; then
+		echo
+		warn "Git review is not initialized!"
+		echo "You can init it by using command git review -s"
+		echo
+		exit 1
+	fi 
+	# send branch for review
+	git review $NAME
+	echo " Send branch '$NAME' for review..."
+	echo
 }
 
 cmd_list() {
@@ -336,7 +355,8 @@ cmd_finish() {
 	git_status=`git status | grep 'ahead of' | grep -c 'by'`
 	if [ $git_status -gt 0 ]; then
 		echo
-		echo "You have commits, that don't present on gerrit or you just forget to fetch it before call this command"
+		warn "You have commits, that don't present on gerrit or you just forget to fetch it before call this command"
+		echo "Try to fetch/pull changes from remote or send nonreviewed commits to gerrit"
 		echo
 		exit 1
 	fi

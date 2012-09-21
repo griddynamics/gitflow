@@ -1,3 +1,11 @@
+#git-flow -- A collection of Git extensions to provide high-level
+# repository operations for Vincent Driessen's branching model.
+#
+# Original blog post presenting this model is found at:
+#    http://nvie.com/git-model
+#
+# Feel free to contribute to this project at:
+#    http://github.com/nvie/gitflow
 #
 # Copyright 2010 Vincent Driessen. All rights reserved.
 # 
@@ -27,33 +35,35 @@
 # policies, either expressed or implied, of Vincent Driessen.
 #
 
-prefix=/usr/local
+init() {
+  require_git_repo
+  require_gitflow_initialized
+  gitflow_load_settings
+  PREFIX=$(git config --get gitflow.prefix.feature)
+}
 
-# files that need mode 755
-EXEC_FILES=git-flow
+usage() {
+        echo "usage: git flow review branch <name>"
+}
 
-# files that need mode 644
-SCRIPT_FILES =git-flow-init
-SCRIPT_FILES+=git-flow-feature
-SCRIPT_FILES+=git-flow-hotfix
-SCRIPT_FILES+=git-flow-release
-SCRIPT_FILES+=git-flow-support
-SCRIPT_FILES+=git-flow-version
-SCRIPT_FILES+=gitflow-common
-SCRIPT_FILES+=gitflow-shFlags
-SCRIPT_FILES+=git-flow-review
+cmd_default() {
+        cmd_branch "$@"
+}
 
-all:
-	@echo "usage: make install"
-	@echo "       make uninstall"
+cmd_branch() {
+	
+	# we need to check, that git review is installed and remote gerrit configured properly
+        gitreview_ex=`git review $1 --dry-run | grep -c "No '.gitreview' file"`
+        if [ $gitreview_ex -eq 1 ]; then
+                echo
+                warn "Git review is not initialized!"
+                echo "You can init it by using command git review -s"
+                echo
+                exit 1
+        fi 
+        # send branch for review
+        git review $1
+        echo " Send branch '$1' for review..."
+        echo
+}
 
-install:
-	@test -f gitflow-shFlags || (echo "Run 'git submodule init && git submodule update' first." ; exit 1 )
-	install -d -m 0755 $(prefix)/bin
-	install -m 0755 $(EXEC_FILES) $(prefix)/bin
-	install -m 0644 $(SCRIPT_FILES) $(prefix)/bin
-
-uninstall:
-	test -d $(prefix)/bin && \
-	cd $(prefix)/bin && \
-	rm -f $(EXEC_FILES) $(SCRIPT_FILES)
