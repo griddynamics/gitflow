@@ -220,7 +220,8 @@ cmd_start() {
 	
 	require_name_arg
 	
-	if echo $NAME | grep -qvE '^fb-'; then 
+	#if echo $NAME | grep -qvE '^fb-'; then
+	if ! startswith "$NAME" "fb-"; then
                 warn "Missing preifx fb-"
                 echo "Must create branch with prefix fb-"
                 exit 1
