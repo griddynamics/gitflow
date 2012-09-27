@@ -49,12 +49,9 @@ parse_args() {
 # Default entry when no SUBACTION is given
 cmd_default() {
 	DEFINE_boolean force false 'force setting of gitflow branches, even if already configured' f
-	#DEFINE_boolean defaults false 'use default branch naming conventions' d
-
-	echo "------------------------------"
-	echo `git config --get gitflow.branch.develop`
-	echo "------------------------------"
-
+	DEFINE_boolean defaults false 'use default branch naming conventions' d
+	DEFINE_boolean maven false 'your project using maven tool' m
+	
 	parse_args "$@"
 	
 	if ! git rev-parse --git-dir >/dev/null 2>&1; then
@@ -74,9 +71,9 @@ cmd_default() {
 	local branch_count
 	local answer
 
-    #if flag defaults; then
-    #    warn "Using default branch names."
-    #fi
+	if flag defaults; then
+    	    warn "Using default branch names."
+    	fi
 
 	# add a master branch if no such branch exists yet
 	local master_branch
@@ -256,8 +253,7 @@ cmd_default() {
 		else
 			printf "\n"
 		fi
-		 was prefix=${answer:-$default_suggestion} become
-		[ "$answer" = "-" ] && prefix= #|| prefix=fb-
+		[ "$answer" = "-" ] && prefix= || prefix=${answer:-$default_suggestion}	
 		git config gitflow.prefix.feature "$prefix"
 	fi
 
