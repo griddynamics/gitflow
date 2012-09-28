@@ -219,14 +219,8 @@ cmd_start() {
 	BASE=${2:-$DEVELOP_BRANCH}
 	
 	require_name_arg
-	
-	#if echo $NAME | grep -qvE '^fb-'; then
-	if ! startswith "$NAME" "fb-"; then
-                warn "Missing preifx fb-"
-                echo "Must create branch with prefix fb-"
-                exit 1
-        fi
 
+    check_naming_conventions "$NAME"
 		 	
 	# sanity checks
 	require_branch_absent "$BRANCH"
