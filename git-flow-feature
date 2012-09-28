@@ -480,7 +480,7 @@ helper_finish_cleanup() {
 	fi
 	
 	if noflag keep; then
-		if [ flag force_delete]; then
+		if flag force_delete; then
 			git branch -D "$BRANCH"
 		else
 			git branch -d "$BRANCH"
