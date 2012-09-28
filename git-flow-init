@@ -72,9 +72,27 @@ cmd_default() {
 	local answer
 
 	if flag defaults; then
-    	    warn "Using default branch names."
-    	fi
+    	    warn "Using default branch names"
+    fi
+			
+	# try to find a configuration file for branch prefixes
+	# if exists and flag defaults set to true store this values in git config
 
+	fname="$HOME/.gitflow"
+	if [ -f $fname ] && flag defaults; then
+		
+		exec<$fname
+        while read line
+        do
+		    if echo $line | grep -qE '='; then
+                param=$(echo $line|awk -F '=' '{print $1}'|awk '{print $1}')
+                value=$(echo $line|awk -F '=' '{print $2}'|awk '{print $1}' )
+                git config "$param" "$value"
+            fi   		
+        done
+   		echo "Stored default values from configuration file"		 
+	fi
+    
 	# add a master branch if no such branch exists yet
 	local master_branch
 	if gitflow_has_master_configured && ! flag force; then
