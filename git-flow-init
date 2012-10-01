@@ -78,9 +78,11 @@ cmd_default() {
 	# try to find a configuration file for branch prefixes
 	# if exists and flag defaults set to true store this values in git config
 
-	fname="$HOME/.gitflow"
+	fname="/etc/gitflow.conf"
+    echo "Try to find values in config file"
 	if [ -f $fname ] && flag defaults; then
 		
+        echo "Using config file for prefixes and branches names"
 		exec<$fname
         while read line
         do

@@ -52,7 +52,7 @@ install:
 	install -d -m 0755 $(prefix)/bin
 	install -m 0755 $(EXEC_FILES) $(prefix)/bin
 	install -m 0644 $(SCRIPT_FILES) $(prefix)/bin
-	@if test -f config.properties;then cp -v config.properties $(HOME)/.gitflow ;fi
+	@if test -f config.properties;then install -m 0644 config.properties /etc/gitflow.conf; fi
 
 uninstall:
 	test -d $(prefix)/bin && \
