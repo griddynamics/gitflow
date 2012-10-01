@@ -50,6 +50,8 @@ parse_args() {
 cmd_default() {
 	DEFINE_boolean force false 'force setting of gitflow branches, even if already configured' f
 	DEFINE_boolean defaults false 'use default branch naming conventions' d
+	DEFINE_boolean maven false 'your project using maven tool' m
+	
 	parse_args "$@"
 	
 	if ! git rev-parse --git-dir >/dev/null 2>&1; then
@@ -69,10 +71,30 @@ cmd_default() {
 	local branch_count
 	local answer
 
-    if flag defaults; then
-        warn "Using default branch names."
+	if flag defaults; then
+    	    warn "Using default branch names"
     fi
+			
+	# try to find a configuration file for branch prefixes
+	# if exists and flag defaults set to true store this values in git config
 
+	fname="/etc/gitflow.conf"
+    echo "Try to find values in config file"
+	if [ -f $fname ] && flag defaults; then
+		
+        echo "Using config file for prefixes and branches names"
+		exec<$fname
+        while read line
+        do
+		    if echo $line | grep -qE '='; then
+                param=$(echo $line|awk -F '=' '{print $1}'|awk '{print $1}')
+                value=$(echo $line|awk -F '=' '{print $2}'|awk '{print $1}' )
+                git config "$param" "$value"
+            fi   		
+        done
+   		echo "Stored default values from configuration file"		 
+	fi
+    
 	# add a master branch if no such branch exists yet
 	local master_branch
 	if gitflow_has_master_configured && ! flag force; then
@@ -113,6 +135,7 @@ cmd_default() {
 		else
 			printf "\n"
 		fi
+
 		master_branch=${answer:-$default_suggestion}
 
 		# check existence in case of an already existing repo
@@ -152,7 +175,7 @@ cmd_default() {
 			should_check_existence=YES
 			default_suggestion=
 			for guess in $(git config --get gitflow.branch.develop) \
-			             'develop' 'int' 'integration' 'master'; do
+			            'develop' 'int' 'integration' 'master'; do
 				if git_local_branch_exists "$guess" && [ "$guess" != "$master_branch" ]; then
 					default_suggestion="$guess"
 					break
@@ -173,7 +196,7 @@ cmd_default() {
 			printf "\n"
 		fi
 		develop_branch=${answer:-$default_suggestion}
-
+		
 		if [ "$master_branch" = "$develop_branch" ]; then
 			die "Production and integration branches should differ."
 		fi
@@ -250,7 +273,7 @@ cmd_default() {
 		else
 			printf "\n"
 		fi
-		[ "$answer" = "-" ] && prefix= || prefix=${answer:-$default_suggestion}
+		[ "$answer" = "-" ] && prefix= || prefix=${answer:-$default_suggestion}	
 		git config gitflow.prefix.feature "$prefix"
 	fi
 
