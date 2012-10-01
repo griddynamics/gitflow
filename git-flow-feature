@@ -347,6 +347,10 @@ cmd_finish() {
 	require_branch "$BRANCH"
 
 	# check if we have commits, that didn't send for review or we just forget use fetch command
+    #
+    # must remember previous branch to switch after checks
+    prev_branch=$(git status |grep '# On branch'|sed -e 's/# On branch//g' )    
+    git checkout "$BRANCH"
 	git_status=`git status | grep 'ahead of' | grep -c 'by'`
 	if [ $git_status -gt 0 ]; then
 		echo
@@ -355,6 +359,7 @@ cmd_finish() {
 		echo
 		exit 1
 	fi
+    git checkout $prev_branch
 	
 	# detect if we're restoring from a merge conflict
 	if [ -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE" ]; then
