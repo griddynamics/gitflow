@@ -1,4 +1,5 @@
-#
+
+
 # git-flow -- A collection of Git extensions to provide high-level
 # repository operations for Vincent Driessen's branching model.
 #
@@ -53,10 +54,29 @@ usage() {
 	echo "       git flow feature rebase [-i] [<name|nameprefix>]"
 	echo "       git flow feature checkout [<name|nameprefix>]"
 	echo "       git flow feature pull [-r] <remote> [<name>]"
+	echo "       git flow feature review <name>"		
 }
 
 cmd_default() {
 	cmd_list "$@"
+}
+
+cmd_review() {
+	parse_args "$@"
+
+	# we need to check, that git review is installed and remote gerrit configured properly
+	gitreview_ex=`git review $NAME --dry-run | grep -c "No '.gitreview' file"`
+	if [ $gitreview_ex -eq 1 ]; then
+		echo
+		warn "Git review is not initialized!"
+		echo "You can init it by using command git review -s"
+		echo
+		exit 1
+	fi 
+	# send branch for review
+	git review $NAME
+	echo " Send branch '$NAME' for review..."
+	echo
 }
 
 cmd_list() {
@@ -197,8 +217,11 @@ cmd_start() {
 	DEFINE_boolean fetch false 'fetch from origin before performing local operation' F
 	parse_args "$@"
 	BASE=${2:-$DEVELOP_BRANCH}
+	
 	require_name_arg
 
+    check_naming_conventions "$NAME"
+		 	
 	# sanity checks
 	require_branch_absent "$BRANCH"
 
@@ -323,6 +346,21 @@ cmd_finish() {
 	# sanity checks
 	require_branch "$BRANCH"
 
+	# check if we have commits, that didn't send for review or we just forget use fetch command
+    #
+    # must remember previous branch to switch after checks
+    prev_branch=$(git status |grep '# On branch'|sed -e 's/# On branch//g' )    
+    git checkout "$BRANCH"
+	git_status=`git status | grep 'ahead of' | grep -c 'by'`
+	if [ $git_status -gt 0 ]; then
+		echo
+		warn "You have commits, that don't present on gerrit or you just forget to fetch it before call this command"
+		echo "Try to fetch/pull changes from remote or send nonreviewed commits to gerrit"
+		echo
+		exit 1
+	fi
+    git checkout $prev_branch
+	
 	# detect if we're restoring from a merge conflict
 	if [ -f "$DOT_GIT_DIR/.gitflow/MERGE_BASE" ]; then
 		#
@@ -440,7 +478,6 @@ helper_finish_cleanup() {
 		git push "$ORIGIN" ":refs/heads/$BRANCH"
 	fi
 	
-	
 	if noflag keep; then
 		if flag force_delete; then
 			git branch -D "$BRANCH"
@@ -448,7 +485,7 @@ helper_finish_cleanup() {
 			git branch -d "$BRANCH"
 		fi
 	fi
-
+	echo 
 	echo
 	echo "Summary of actions:"
 	echo "- The feature branch '$BRANCH' was merged into '$DEVELOP_BRANCH'"
