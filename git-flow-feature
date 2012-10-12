@@ -200,6 +200,7 @@ parse_args() {
 	# read arguments into global variables
 	NAME=$1
 	BRANCH=$PREFIX$NAME
+	BASE=${2:-$DEVELOP_BRANCH}
 }
 
 parse_remote_name() {
@@ -217,7 +218,6 @@ cmd_start() {
 	DEFINE_boolean fetch false 'fetch from origin before performing local operation' F
 	DEFINE_boolean publish false 'Publish the feature branch after it is created' P
 	parse_args "$@"
-	BASE=${2:-$DEVELOP_BRANCH}	
 	require_name_arg
 
     check_naming_conventions "$NAME"
