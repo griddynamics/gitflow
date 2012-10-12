@@ -215,9 +215,9 @@ parse_remote_name() {
 
 cmd_start() {
 	DEFINE_boolean fetch false 'fetch from origin before performing local operation' F
+	DEFINE_boolean publish false 'Publish the feature branch after it is created' P
 	parse_args "$@"
-	BASE=${2:-$DEVELOP_BRANCH}
-	
+	BASE=${2:-$DEVELOP_BRANCH}	
 	require_name_arg
 
     check_naming_conventions "$NAME"
@@ -253,6 +253,10 @@ cmd_start() {
 	echo "Now, start committing on your feature. When done, use:"
     echo "     git flow feature finish $NAME"
     echo ""
+
+    if flag publish; then
+       cmd_publish $NAME
+    fi  
 }
 
 change_version_from_dev_to_feature() {
