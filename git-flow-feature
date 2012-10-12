@@ -311,7 +311,7 @@ change_version_from_feature_to_dev() {
 }
 
 get_maven_project_version() {
-    eval $1=`mvn help:evaluate -Dexpression=project.version | egrep -i -v "\[" | egrep -i -v "download"`
+    eval $1=`mvn help:evaluate -Dexpression=project.version | egrep -E -e "^[1-9][0-9]*(\.[0-9]+){2}((-[a-zA-Z]+)+)?$"`
 }
 
 is_maven_help_plugin_available() {
